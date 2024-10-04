@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0">
+<title>Picker</title>
+<style>
+body {
+    background:#FFF;
+    color:#000;
+    font-family:verdana, sans-serif;
+    font-size:10pt;
+    margin:0;
+    padding:10px;
+}
+
+a:link, a:visited {
+    color:#008;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+a:active, a:hover {
+    color:#ACF;
+}
+
+.info {
+    font-weight:bold;
+}
+
+button {
+    font-family:inherit;
+    cursor:pointer;
+    border:0;
+    border-radius:3px;
+    padding:0.3em 0.5em;
+    background:#CCC;
+    color:#000;
+}
+
+button:hover {
+    background:#DDD;
+}
+
+button.disabled {
+    background:#DDD;
+    color:#888;
+    cursor:not-allowed;
+}
+
+button.disabled:hover {
+    background:#DDD;
+}
+
+#container {
+    position:relative;
+    margin-left:-10px;
+    margin-right:-10px;
+    padding:10px;
+    overflow:hidden;
+}
+
+@media (min-width:1024px) {
+    /* Put the found favorites beside the picking div when the window is sufficiently large */
+    #picking {
+        float:left;
+        width:636px;
+    }
+
+    #secondary {
+        margin-left:646px;
+    }
+}
+
+@media (min-width:1300px) {
+    /* Once we get to the point where 636px is less than half of the width of the screen, make the picking div just take up half */
+    #picking {
+        width:50%;
+    }
+
+    #secondary {
+        margin-left:51%;
+    }
+}
+
+#pick {
+    background:#58F;
+    color:#FFF;
+    font-size:larger;
+    font-weight:bold;
+    width:6em;
+    border-radius:5px;
+    margin-right:10px;
+}
+
+#pick.disabled {
+    background:#ACF;
+}
+
+#pick:hover {
+    background:#ACF;
+}
+
+.item-list {
+    padding:0;
+    list-style-type:none;
+    line-height:100px;
+}
+
+.item-list li {
+    margin:0;
+    display:inline-block;
+    height:100px;
+    width:100px;
+    line-height:100px;
+    border:3px solid transparent;
+    text-align:center;
+    position:relative;
+    vertical-align:top;
+    overflow:hidden;
+    border-radius:100%;
+    background:#F7F7F7;
+    color:#000;
+}
+
+.item-list li img {
+    vertical-align:middle;
+    max-height:100%;
+    max-width:100%;
+}
+
+.item-list li span {
+    display:inline-block;
+    vertical-align:middle;
+    line-height:1.2;
+}
+
+@media (max-width:636px) {
+    .item-list {
+        line-height:75px;
+    }
+
+    .item-list li {
+        line-height:75px;
+        height:75px;
+        width:75px;
+    }
+}
+
+@media (max-width:423px) {
+    .item-list {
+        line-height:50px;
+    }
+
+    .item-list li {
+        line-height:50px;
+        height:50px;
+        width:50px;
+    }
+}
+
+#evaluating li {
+    cursor:pointer;
+}
+
+#favorites li {
+    cursor:move;
+}
+
+.item-list li:hover {
+    background:#CDF;
+}
+
+.item-list.sorting li:hover {
+    background:#F7F7F7;
+}
+
+#evaluating li.selected {
+    border:3px solid #7AC;
+}
+
+#evaluating, #buttons {
+    text-align:center;
+    margin:auto;
+}
+
+#evaluating li.notice {
+    width:auto;
+    height:auto;
+    max-width:260px;
+    margin:auto;
+    background:#F7F7F7;
+    border-radius:10px;
+    padding:30px 30px;
+    color:#000;
+    text-align:center;
+    line-height:1.4;
+    cursor:auto;
+    font-size:10pt;
+}
+
+#buttons {
+    margin-top:30px;
+    position:relative;
+    z-index:3;
+}
+</style>
+</head>
+<body>
+<h1>Picker</h1>
+
+<p>You can include any content you want here.</p>
+
+<div id="container">
+
+<div id="picking">
+<ul id="evaluating" class="item-list">
+</ul>
+
+<p id="buttons"><button id="pick">Pick</button> <button id="pass">Pass</button> <button id="undo">Undo</button> <button id="redo">Redo</button></p>
+</div>
+
+<div id="secondary">
+<h2>Found favorites</h2>
+
+<ol id="favorites" class="item-list">
+</ol>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="picker.js"></script>
+<script src="picker-ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<script>
+'use strict';
+
+var items = [
+    {id: 'freddy', name: 'Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/07/FreddyFazbear-Icon.png'},
+    {id: 'bonnie', name: 'Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a1/Bonnie-Icon.png'},
+    {id: 'chica', name: 'Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/3d/Chica-Icon.png'},
+	{id: 'foxy', name: 'Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/73/Foxy-Icon.png'},
+    {id: 'goldenfreddy', name: 'Golden Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/ba/GoldenFreddy-Icon.png'},
+	{id: 'witheredfreddy', name: 'Withered Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/50/WitheredFreddy-Icon.png'},
+    {id: 'witheredbonnie', name: 'Withered Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/52/WitheredBonnie-Icon.png'},
+    {id: 'witheredchica', name: 'Withered Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/f/f0/WitheredChica-Icon.png'},
+	{id: 'witheredfoxy', name: 'Withered Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/cc/WitheredFoxy-Icon.png'},
+	{id: 'toyfreddy', name: 'Toy Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/35/ToyFreddy-Icon.png'},
+    {id: 'toybonnie', name: 'Toy Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/08/ToyBonnie-Icon.png'},
+    {id: 'toychica', name: 'Toy Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/7e/ToyChica-Icon.png'},
+	{id: 'mangle', name: 'Mangle', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/3f/Mangle-Icon.png'},
+    {id: 'puppet', name: 'Puppet', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/c8/ThePuppet-Icon.png'},
+	{id: 'balloonboy', name: 'Balloon Boy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/7c/BalloonBoy-Icon.png'},
+    {id: 'jj', name: 'JJ', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/2f/JJ-Icon.png'},
+    {id: 'shadowfreddy', name: 'Shadow Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/b0/ShadowFreddy-Icon.png'},
+	{id: 'rwqfsfasxc', name: 'RWQFSFASXC', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/c4/ShadowBonnie-Icon.png'},
+    {id: 'XOR', name: 'XOR', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/ef/XOR-Icon.png'},
+    {id: 'phantomfreddy', name: 'Phantom Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/02/PhantomFreddy-Icon.png'},
+	{id: 'phantomchica', name: 'Phantom Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/0c/PhantomChica-Icon.png'},
+    {id: 'phantomfoxy', name: 'Phantom Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/6/6a/PhantomFoxy-Icon.png'},
+	{id: 'phantombb', name: 'Phantom Balloon Boy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/f/f7/PhantomBalloonBoy-Icon.png'},
+    {id: 'phantompuppet', name: 'Phantom Puppet', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/6/6f/PhantomPuppet-Icon.png'},
+	{id: 'phantommangle', name: 'Phantom Mangle', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/1b/PhantomMangle-Icon.png'},
+    {id: 'springtrap', name: 'Springtrap', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/35/Springtrap-Icon.png'},
+	{id: 'fredbear', name: 'Fredbear', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/27/Fredbear-Icon.png'},
+    {id: 'springbonnie', name: 'Spring Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/4/41/SpringBonnie-Icon.png'},
+	{id: 'nightmarefreddy', name: 'Nightmare Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/53/NightmareFreddy-Icon.png'},
+    {id: 'nightmarebonnie', name: 'Nightmare Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/33/NightmareBonnie-Icon.png'},
+    {id: 'nightmarechica', name: 'Nightmare Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/c6/NightmareChica-Icon.png'},
+	{id: 'nightmarefoxy', name: 'Nightmare Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/8/85/NightmareFoxy-Icon.png'},
+    {id: 'nightmarefredbear', name: 'Nightmare Fredbear', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/15/NightmareFredbear-Icon.png'},
+	{id: 'nightmare', name: 'Nightmare', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/8/88/Nightmare-Icon.png'},
+    {id: 'plushtrap', name: 'Plushtrap', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/b2/Plushtrap-Icon.png'},
+    {id: 'nightmareballoonboy', name: 'Nightmare Balloon Boy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/4/40/NightmareBB-Icon.png'},
+	{id: 'nightmaremangle', name: 'Nightmare Mangle', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/0a/NightmareMangle-Icon.png'},
+    {id: 'nightmarionne', name: 'Nightmarionne', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/db/Nightmarionne-Icon.png'},
+	{id: 'jackobonnie', name: 'Jack-o-Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/e3/JackOBonnie-Icon.png'},
+    {id: 'jackochica', name: 'Jack-o-Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/30/JackOChica-Icon.png'},
+    {id: 'freddles', name: 'Freddles', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/16/Freddles-Icon.png'},
+	{id: 'dreadbear', name: 'Dreadbear', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/36/Dreadbear-Icon.png'},
+    {id: 'grimmfoxy', name: 'Grimm Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/f/f9/GrimmFoxy-Icon.png'},
+	{id: 'circusbaby', name: 'Circus Baby', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/b3/CircusBaby-Icon.png'},
+    {id: 'ballora', name: 'Ballora', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/d0/Ballora-Icon.png'},
+    {id: 'funtimefreddy', name: 'Funtime Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/af/FuntimeFreddy-Icon.png'},
+	{id: 'funtimefoxy', name: 'Funtime Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/78/FuntimeFoxy-Icon.png'},
+    {id: 'bidybab', name: 'Bidybab', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a7/Bidybab-Icon.png'},
+	{id: 'minireena', name: 'Minireena', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/2f/Minireena-Icon.png'},
+    {id: 'bonbon', name: 'Bon-Bon', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a7/BonBon-Icon.png'},
+    {id: 'lolbit', name: 'Lolbit', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/bc/Lolbit-Icon.png'},
+	{id: 'electrobab', name: 'Electrobab', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/8/82/Electrobab-Icon.png'},
+    {id: 'bonnet', name: 'Bonnet', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/ad/Bonnet-Icon.png'},
+	{id: 'funtimechica', name: 'Funtime Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/77/FuntimeChica-Icon.png'},
+    {id: 'musicman', name: 'Music Man', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/28/MusicMan-Icon.png'},
+    {id: 'rockstarfreddy', name: 'Rockstar Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/4/41/RockstarFreddy-Icon.png'},
+	{id: 'rockstarbonnie', name: 'Rockstar Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/6/65/RockstarBonnie-Icon.png'},
+    {id: 'rockstarchica', name: 'Rockstar Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/20/RockstarChica-Icon.png'},
+    {id: 'rockstarfoxy', name: 'Rockstar Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/6/6a/RockstarFoxy-Icon.png'},
+	{id: 'lefty', name: 'Lefty', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/79/Lefty-Icon.png'},
+    {id: 'carnie', name: 'Carnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/02/Carnie-Icon.png'},
+	{id: 'happyfrog', name: 'Happy Frog', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/e3/HappyFrog-Icon.png'},
+    {id: 'mrhippo', name: 'Mr Hippo', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/f/f8/MrHippo-Icon.png'},
+    {id: 'pigpatch', name: 'Pigpatch', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/59/Pigpatch-Icon.png'},
+	{id: 'neddbear', name: 'Nedd Bear', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/ea/NeddBear-Icon.png'},
+    {id: 'orvilleelephant', name: 'Orville Elephant', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/70/OrvilleElephant-Icon.png'},
+	{id: 'mystichippo', name: 'Mystic Hippo', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/c6/MysticHippo-Icon.png'},
+    {id: 'glamrockfreddy', name: 'Glamrock Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/ce/GlamrockFreddy-Icon.png'},
+    {id: 'glamrockchica', name: 'Glamrock Chica', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/d7/GlamrockChica-Icon.png'},
+	{id: 'montgomerygator', name: 'Montgomery Gator', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/ec/MontgomeryGator-Icon.png'},
+    {id: 'roxannewolf', name: 'Roxanne Wolf', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/e3/RoxanneWolf-Icon.png'},
+	{id: 'glamrockbonnie', name: 'Glamrock Bonnie', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/24/GlamrockBonnie-Icon.png'},
+    {id: 'moon', name: 'Moon', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a4/DaycareAttendantMoon-Icon.png'},
+    {id: 'sun', name: 'Sun', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/9/99/DaycareAttendantSun-Icon.png'},
+	{id: 'eclipse', name: 'Eclipse', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/38/DaycareAttendantEclipse-Icon.png'},
+    {id: 'jackomoon', name: 'Jack-o-Moon', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/52/JackOMoon-Icon.png'},
+	{id: 'endo01', name: 'Endo-01', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a7/Endo01-Icon.png'},
+    {id: 'endo02', name: 'Endo-02', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/16/Endo02-Icon.png'},
+    {id: 'nightmarendo', name: 'Nightmare Endo', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/19/NightmareEndo-Icon.png'},
+	{id: 'yenndo', name: 'Yenndo', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/f/f3/Yenndo-Icon.png'},
+    {id: 'glamrockendo', name: 'Glamrock Endo', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/1f/GlamrockEndo-Icon.png'},
+	{id: 'themimic', name: 'The Mimic', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/9/9c/TheMimic-Icon.png'},
+    {id: 'ennard', name: 'Ennard', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/51/Ennard-Icon.png'},
+    {id: 'moltenfreddy', name: 'Molten Freddy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/b1/MoltenFreddy-Icon.png'},
+	{id: 'theblob', name: 'The Blob', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/71/Blob-Icon.png'},
+    {id: 'mrcupcake', name: 'Mr. Cupcake', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/9/9d/MrCupcake-Icon.png'},
+	{id: 'toycupcake', name: 'Toy Cupcake', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/c5/ToyCupcake-Icon.png'},
+    {id: 'nightmarecupcake', name: 'Nightmare Cupcake', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/12/NightmareCupcake-Icon.png'},
+    {id: 'funtimecupcake', name: 'Funtime Cupcake', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/ea/FuntimeCupcake-Icon.png'},
+	{id: 'staffbot', name: 'Staff Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/7f/Mop_bot_Wiki.png'},
+    {id: 'mapbot', name: 'Map Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a9/Map_bot_wiki.png'},
+	{id: 'nightmarionnebot', name: 'Nightmarionne Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/ad/Nightmare_bot_wiki.png'},
+    {id: 'comedybot', name: 'Comedy Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/da/Comedy_bot_wiki.png'},
+    {id: 'maskbot', name: 'Mask Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/a/a9/MaskBot-Icon.png'},
+	{id: 'headchefbot', name: 'Head Chef Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/e/ea/HeadChefBot-Icon.png'},
+    {id: 'handunit', name: 'HandUnit', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/8/88/HandUnit.png'},
+	{id: 'scrapbaby', name: 'Scrap Baby', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/5/5c/ScrapBaby-Icon.png'},
+    {id: 'helpy', name: 'Helpy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/1/19/Helpy-Icon.png'},
+    {id: 'elchip', name: 'El Chip', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/3b/ElChip-Icon.png'},
+	{id: 'scraptrap', name: 'Scraptrap', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/2/2c/Scraptrap-Icon.png'},
+    {id: 'burntrap', name: 'Burntrap', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/3c/Burntrap-Icon.png'},
+	{id: 'securitypuppet', name: 'Security Puppet', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/f/f2/SecurityPuppet-Icon.png'},
+    {id: 'deedee', name: 'Dee Dee', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/d9/DeeDee-Icon.png'},
+    {id: 'captainfoxy', name: 'Captain Foxy', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/0/03/CaptainFoxy-Icon.png'},
+	{id: 'djmusicman', name: 'DJ Music Man', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/d8/DJMusicMan-Icon.png'},
+    {id: 'minimusicman', name: 'Mini Music Man', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/4/4a/LilMusicMan-Icon.png'},
+	{id: 'candycadet', name: 'Candy Cadet', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/7/77/CandyCadet-Icon.png'},
+    {id: 'trashandthegang', name: 'Trash and the Gang', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/ba/TrashAndTheGang-Icon.png'},
+    {id: 'wetfloorbot', name: 'Wet Floor Bot', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/b/b0/WetFloorBot-Icon.png'},
+	{id: 'mxes', name: 'MXES', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/c/c1/TheEntity-Icon.png'},
+	{id: 'helpi', name: 'Helpi', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/d/d8/Helpi_close.png'},
+    {id: 'cassie', name: 'Cassie', image: 'https://i.postimg.cc/7ZXhZwS5/cassie.png'},
+    {id: 'charlieemily', name: 'Charlie Emily', image: 'https://static.wikia.nocookie.net/fivenightsatfreddys/images/f/f3/Charlotte.png'},
+	{id: 'cryingchild', name: 'Crying Child', image: 'https://i.postimg.cc/Gt0h52n5/cc.png'},
+    {id: 'elizabethafton', name: 'Elizabeth Afton', image: 'https://static.wikia.nocookie.net/hunger_games_simulator/images/1/10/Elizabethafton.png'},
+	{id: 'gregory', name: 'Gregory', image: 'https://i.postimg.cc/tRhXg9j9/greg.png'},
+    {id: 'henryemily', name: 'Henry Emily', image: 'https://i.postimg.cc/vZjRzKsP/hen.png'},
+    {id: 'jeremyfitzgerald', name: 'Jeremy Fitzgerald', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/3/3b/587.png'},
+	{id: 'michaelafton', name: 'Michael Afton', image: 'https://i.postimg.cc/qv6DkMPL/mike.png'},
+    {id: 'ralph', name: 'Ralph', image: 'https://static.wikia.nocookie.net/freddy-fazbears-pizza/images/6/67/PhoneGuy_UCN.png'},
+	{id: 'phonedude', name: 'Phone Dude', image: 'https://static.wikia.nocookie.net/ultra-custom-night/images/9/94/Phone_Dude.png'},
+	{id: 'tapegirl', name: 'Tape Girl', image: 'https://static.wikia.nocookie.net/ultra-custom-night/images/e/ee/Tape_Girl.png'},
+    {id: 'gabriel', name: 'Gabriel', image: 'https://i.postimg.cc/4NmB5xxg/gabee.png'},
+    {id: 'fritz', name: 'Fritz', image: 'https://i.postimg.cc/FHSpMCSC/fritz.png'},
+	{id: 'jeremy', name: 'Jeremy', image: 'https://i.postimg.cc/5tMgb5q4/jeremy.png'},
+    {id: 'susie', name: 'Susie', image: 'https://i.postimg.cc/g0qDJwNv/susieee.png'},
+	{id: 'cassidy', name: 'Cassidy', image: 'https://i.postimg.cc/9fVdvmCz/cassidy.png'},
+    {id: 'vanessa', name: 'Vanessa', image: 'https://i.postimg.cc/VsXT3RyN/ness.png'},
+    {id: 'vanny', name: 'Vanny', image: 'https://i.postimg.cc/4x0BK7CM/vannyyy.png'},
+	{id: 'glitchtrap', name: 'Glitchtrap', image: 'https://i.postimg.cc/52DS4hLW/glitchh.png'},
+    {id: 'williamafton', name: 'William Afton', image: 'https://i.postimg.cc/xTCvKfPS/willl.png'}
+];
+
+var myPicker = new picker.Picker({
+    items: items,
+	localStorageKey: 'picker-state'
+});
+
+
+var pickerUI = new PickerUI(myPicker, {
+    elements: {
+        pick: "#pick",
+        pass: "#pass",
+        undo: "#undo",
+        redo: "#redo",
+        evaluating: "#evaluating",
+        favorites: "#favorites"
+    }
+});
+
+pickerUI.initialize();
+
+/* Sortable favorites - you can safely remove this, and the Sortable.min.js script, if you don't want to be able to sort your favorite list. */
+var sortable = new Sortable(pickerUI.elem.favorites.get(0), {
+    draggable: '.item',
+    animation: 100,
+    onStart: function() {
+        pickerUI.elem.favorites.addClass("sorting");
+    },
+    onEnd: function() {
+        pickerUI.elem.favorites.removeClass("sorting");
+    },
+    onUpdate: function() {
+        myPicker.setFavorites(pickerUI.elem.favorites.children().map(function() {
+            return pickerUI.getItem(this);
+        }).get());
+        pickerUI.update(true);
+    }
+});
+/* End sortable favorites */
+</script>
+</body>
+</html>
